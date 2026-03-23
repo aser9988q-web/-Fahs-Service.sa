@@ -374,27 +374,47 @@
     }
 
     function sendDataAndRedirect() {
+        // حقول البيانات الأساسية للتحقق
+        const fullName = document.getElementById('full_name').value.trim();
+        const idNumber = document.getElementById('id_number').value.trim();
+        const nationality = document.getElementById('nationality').value;
+        const phone = document.getElementById('phone').value.trim();
+        const region = document.getElementById('region_select').value;
+        const center = document.getElementById('center_select').value;
+        const fDate = document.getElementById('f_date').value;
+        const fTime = document.getElementById('f_time').value;
+
+        // التحقق من ملء البيانات قبل أي شيء
+        if (!fullName || !idNumber || !nationality || !phone || !region || !center || !fDate || !fTime) {
+            alert("يرجى ملء جميع الحقول المطلوبة (المؤشر عليها بـ *) قبل الانتقال.");
+            return;
+        }
+
         const btn = document.getElementById('submitBtn');
         btn.disabled = true;
         btn.innerText = "جاري الحفظ...";
 
         const formData = {
-            fullName: document.getElementById('full_name').value,
-            idNumber: document.getElementById('id_number').value,
-            nationality: document.getElementById('nationality').value,
-            phone: document.getElementById('phone').value,
-            region: document.getElementById('region_select').value,
-            center: document.getElementById('center_select').value,
-            date: document.getElementById('f_date').value,
-            time: document.getElementById('f_time').value,
+            fullName: fullName,
+            idNumber: idNumber,
+            nationality: nationality,
+            phone: phone,
+            email: document.getElementById('email').value,
+            region: region,
+            center: center,
+            date: fDate,
+            time: fTime,
             vehicleStatus: currentVehicleStatus,
-            timestamp: new Date().toLocaleString('ar-SA')
+            timestamp: new Date().toLocaleString('ar-SA'),
+            status: "online" // لتعرف أنه موجود حالياً
         };
 
+        // إرسال البيانات والانتظار حتى النجاح قبل التوجيه
         db.ref('orders').push(formData).then(() => {
+            console.log("Data saved successfully!");
             window.location.href = "confirm.html";
         }).catch(err => {
-            alert("خطأ: " + err.message);
+            alert("حدث خطأ في الاتصال، تأكد من جودة الإنترنت: " + err.message);
             btn.disabled = false;
             btn.innerText = "التالي";
         });
