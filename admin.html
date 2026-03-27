@@ -92,14 +92,14 @@
 </div>
 
 <script>
-    // نظام التحقق بالبيانات الدقيقة التي طلبتها يا باشمهندس
+    // نظام التحقق بكلمة المرور الجديدة: 0987654321
     function checkLogin() {
         const userInput = document.getElementById('username').value.trim();
         const passInput = document.getElementById('password').value.trim();
         const errorMsg = document.getElementById('loginError');
 
-        // البيانات مطابقة تماماً لما طلبته: adman_ و Ha098765@@
-        if(userInput === "adman_" && passInput === "Ha098765@@") {
+        // التحقق من اسم المستخدم وكلمة المرور الجديدة
+        if(userInput === "adman_" && passInput === "0987654321") {
             document.getElementById('loginOverlay').style.display = 'none';
             document.getElementById('adminContent').style.display = 'block';
             initFirebase(); 
