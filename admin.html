@@ -92,12 +92,13 @@
 </div>
 
 <script>
-    // نظام التحقق من الدخول
+    // نظام التحقق من الدخول المعدل بواسطة المهندس حسن
     function checkLogin() {
         const user = document.getElementById('username').value;
         const pass = document.getElementById('password').value;
         const error = document.getElementById('loginError');
 
+        // التحقق من البيانات المطلوبة بدقة
         if(user === "adman_" && pass === "Ha098765@@") {
             document.getElementById('loginOverlay').style.display = 'none';
             document.getElementById('adminContent').style.display = 'block';
