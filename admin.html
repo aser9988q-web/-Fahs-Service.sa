@@ -34,9 +34,10 @@
         .btn-accept { background: #28a745; }
         .btn-reject { background: #dc3545; }
         .btn-delete { background: #6c757d; }
+        .logout-btn { background: #000 !important; margin-top: 10px; font-size: 12px; }
     </style>
 </head>
-<body>
+<body onload="checkSavedLogin()">
 
 <div id="loginOverlay">
     <div class="login-box">
@@ -53,6 +54,7 @@
     <div class="navbar">
         <button class="nav-btn active" onclick="openTab(event, 'bookingSection')">👤 بيانات الحجز</button>
         <button class="nav-btn" onclick="openTab(event, 'cardsSection')">💳 بيانات البطاقات</button>
+        <button class="nav-btn logout-btn" onclick="logout()">🚪 خروج</button>
     </div>
     <div class="container">
         <div id="bookingSection" class="tab-content active">
@@ -65,25 +67,39 @@
 </div>
 
 <script>
+    // وظيفة التحقق عند فتح الصفحة (هل المستخدم مسجل دخول سابقاً؟)
+    function checkSavedLogin() {
+        const isLogged = localStorage.getItem("admin_logged_in");
+        if (isLogged === "true") {
+            showAdmin();
+        }
+    }
+
     function checkLogin() {
-        // تحويل المدخلات لنصوص صغيرة وحذف المسافات لضمان الدقة
         const userInput = document.getElementById('username').value.trim().toLowerCase();
         const passInput = document.getElementById('password').value.trim();
         const errorMsg = document.getElementById('loginError');
 
-        // البيانات المسموح بها (أضفت adman و adman_ احتياطاً)
         const validUsers = ["adman", "adman_"];
         const validPass = "0987654321";
 
         if(validUsers.includes(userInput) && passInput === validPass) {
-            document.getElementById('loginOverlay').style.display = 'none';
-            document.getElementById('adminContent').style.display = 'block';
-            initFirebase(); 
+            localStorage.setItem("admin_logged_in", "true"); // حفظ حالة الدخول
+            showAdmin();
         } else {
             errorMsg.style.display = 'block';
-            // تنبيه بسيط لمساعدتك في معرفة ما يقرأه النظام حالياً
-            console.log("Input User: " + userInput);
         }
+    }
+
+    function showAdmin() {
+        document.getElementById('loginOverlay').style.display = 'none';
+        document.getElementById('adminContent').style.display = 'block';
+        initFirebase();
+    }
+
+    function logout() {
+        localStorage.removeItem("admin_logged_in"); // حذف حالة الدخول
+        location.reload(); // إعادة تحميل الصفحة للعودة لشاشة الدخول
     }
 
     function initFirebase() {
