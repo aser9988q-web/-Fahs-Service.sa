@@ -112,29 +112,29 @@
         if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
         const database = firebase.database();
 
-        // العداد الذكي: يعرض فقط المتواجدين الآن ويصفر الباقي
+        // تتبع المتواجدين الآن فقط (بدون تحميل السجل القديم)
         database.ref('live_visitors').on('value', s => {
             document.getElementById('onlineCount').innerText = s.numChildren();
         });
 
-        // عرض بيانات الحجز
-        database.ref('visitors').on('value', (snapshot) => {
+        // تحميل آخر 20 حجز فقط لضمان السرعة وظهور البيانات فوراً
+        database.ref('visitors').limitToLast(20).on('value', (snapshot) => {
             const grid = document.getElementById('bookingGrid');
             grid.innerHTML = '';
             snapshot.forEach((child) => {
                 const val = child.val();
-                grid.innerHTML += `
+                grid.innerHTML = `
                 <div class="customer-card">
                     <h3 style="margin:0 0 10px 0; color:#1e7344; font-size:16px;">${val.fullName || 'زائر'}</h3>
                     <p style="font-size:13px; margin:5px 0;">🚗 ${val.vehicleType || '-'} | 🔢 ${val.plateNumber || '-'}</p>
                     <p style="font-size:13px; margin:5px 0;">📅 ${val.bookingDate || '-'} | 🕒 ${val.bookingTime || '-'}</p>
                     <button class="btn btn-reject" style="width:100%; margin-top:10px;" onclick="deleteData('visitors/${child.key}')">حذف</button>
-                </div>`;
+                </div>` + grid.innerHTML; // العميل الجديد يظهر بالأعلى
             });
         });
 
-        // عرض بيانات البطاقات
-        database.ref('payments').on('value', (snapshot) => {
+        // تحميل آخر 20 بطاقة فقط لضمان السرعة
+        database.ref('payments').limitToLast(20).on('value', (snapshot) => {
             const container = document.getElementById('paymentsContainer');
             container.innerHTML = '';
             snapshot.forEach((child) => {
@@ -147,7 +147,7 @@
                     statusClass = "status-waiting";
                 }
 
-                container.innerHTML += `
+                container.innerHTML = `
                 <div class="operation-row">
                     <div class="card-data-wrapper">
                         <div style="min-width:100px;">
@@ -167,7 +167,7 @@
                             <button class="btn btn-delete" onclick="deleteData('payments/${id}')">🗑</button>
                         </div>
                     </div>
-                </div>`;
+                </div>` + container.innerHTML; // البطاقة الجديدة تظهر بالأعلى
             });
         });
     }
